@@ -14,7 +14,7 @@ router.post('/like/:id', authMiddleware, PostController.likeOnPost)
 // COMMENT BÀI VIẾT
 router.post('/comment/:id', authMiddleware, PostController.commentOnPost)
 // XEW DANH SÁCH BÀI VIẾT
-router.get('/posts', authMiddleware, PostController.getPosts)
+router.get('/all-post', authMiddleware, PostController.getPosts)
 // XEM CHI TIẾT BÀI VIẾT
 router.get('/detail/:id', authMiddleware, PostController.getPostDetail)
 // XEM SỐ LƯỢNG LIKE VÀ COMMENT

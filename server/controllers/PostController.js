@@ -182,10 +182,12 @@ const PostController = {
 	},
 	// XEW DANH SÁCH BÀI VIẾT
 	getPosts: async (req, res) => {
-		const userId = req.userId
-
+		const userId = req.user.userId
+		
 		try {
 			const user = await Account.findById(userId)
+			console.log(user);
+			
 			if (!user) {
 				return res
 					.status(404)
