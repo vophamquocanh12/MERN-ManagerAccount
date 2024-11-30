@@ -5,8 +5,11 @@ const mongoose = require('mongoose')
 const PostController = {
 	// TẠO BÀI VIẾT
 	createPost: async (req, res) => {
-		const {title, content} = req.body
-		const userId = req.userId // Lấy ID người dùng từ token đã xác thực
+		const {title, content, link} = req.body
+		const accountId = req.user.userId // Lấy ID người dùng từ token đã xác thực
+
+		console.log(accountId)
+
 		if (!title || !content) {
 			return res
 				.status(400)
@@ -17,8 +20,10 @@ const PostController = {
 			const newPost = new Post({
 				title,
 				content,
-				author: userId,
+				link: link.startsWith('http://') ? link : `http://${link}`,
+				author: accountId,
 			})
+
 			await newPost.save()
 			return res
 				.status(201)
@@ -31,18 +36,19 @@ const PostController = {
 	},
 	// SỪA BÀI VIẾT
 	editPost: async (req, res) => {
-		const {title, content} = req.body
+		const {title, content, link} = req.body
 		const postId = req.params.id
 
 		try {
 			const post = await Post.findById(postId)
+
 			if (!post) {
 				return res
 					.status(404)
 					.json({success: false, message: 'Post not found'})
 			}
 			// kiểm tra quyền tác giả
-			if (post.author.toString() !== userId) {
+			if (post.author.toString() !== req.user.userId) {
 				return res.status(403).json({
 					success: false,
 					message: 'You are not authorized to edit this post',
@@ -51,6 +57,7 @@ const PostController = {
 			// cập nhật thông tin bài viết
 			post.title = title || post.title
 			post.content = content || post.content
+			post.link = link || post.link
 			post.updatedAt = Date.now() // Cập nhật thời gian sửa đổi
 
 			await post.save()
@@ -79,18 +86,27 @@ const PostController = {
 			}
 
 			// kiểm tra xem người yêu cầu có phải tác giả của bài viết không
-			if (post.author.toString() !== req.userId) {
+			if (post.author.toString() !== req.user.userId) {
 				return res.status(403).json({
 					success: false,
 					message: 'You are not authorized to delete this post',
 				})
 			}
-			await post.remove()
+			// Xóa tất cả các comment liên quan đến bài viết
+			await Comment.deleteMany({postId: postId})
+
+			// Cập nhật số lượng like cho các bài viết khác (nếu cần)
+			const userId = post.author.toString()
+			await Post.updateMany({likes: userId}, {$pull: {likes: userId}})
+
+			await Post.findByIdAndDelete(postId)
 			return res.status(200).json({
 				success: true,
 				message: 'Post deleted successfully',
 			})
 		} catch (error) {
+			console.log(error)
+
 			return res
 				.status(500)
 				.json({success: false, message: 'Server error'})
@@ -186,6 +202,43 @@ const PostController = {
 			return res
 				.status(500)
 				.json({success: false, message: 'Server error: '})
+		}
+	},
+	//XEM CHI TIẾT BÀI VIẾT
+	getPostDetail: async (req, res) => {
+		const postId = req.params.id
+
+		try {
+			const post = await Post.findById(postId).populate(
+				'author',
+				'username'
+			) // populate tác giả bài viết nếu cần
+			if (!post) {
+				return res
+					.status(404)
+					.json({success: false, message: 'Post not found'})
+			}
+
+			// Trả về chi tiết bài viết (bao gồm nội dung bài viết, tác giả, likes, comments...)
+			return res.status(200).json({
+				success: true,
+				post: {
+					title: post.title,
+					content: post.content,
+					link: post.link,
+					author: post.author.username,
+					likes: post.likes,
+					comments: post.comments,
+					likeCount: post.likeCount,
+					commentCount: post.commentCount,
+					createdAt: post.createdAt,
+					updatedAt: post.updatedAt,
+				},
+			})
+		} catch (error) {
+			return res
+				.status(500)
+				.json({success: false, message: 'Server error'})
 		}
 	},
 	// XEM SỐ LƯỢNG LIKE VÀ COMMENT

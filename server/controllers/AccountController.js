@@ -168,13 +168,20 @@ const AccountController = {
 					.status(404)
 					.json({success: false, message: 'Account not found'})
 
+			// Kiểm tra xem đã là bạn chưa
 			if (user.friends.includes(friendId))
 				return res
 					.status(400)
 					.json({success: false, message: 'Already friends'})
 
+			// Thêm friendId vào danh sách bạn bè của user
 			user.friends.push(friendId)
+			// Thêm userId vào danh sách bạn bè của friend
+			friend.friends.push(userId)
+
+			// Lưu lại thông tin của cả hai người
 			await user.save()
+			await friend.save()
 
 			return res.json({
 				success: true,
@@ -289,6 +296,12 @@ const AccountController = {
 				})
 			}
 
+			// Xóa ID người dùng khỏi danh sách bạn bè của người khác
+			await Account.updateMany(
+				{friends: userId}, // Điều kiện: danh sách bạn có userId
+				{$pull: {friends: userId}} // Xóa userId khỏi danh sách friends
+			)
+
 			// Tìm và xóa tài khoản
 			const deletedUser = await Account.findByIdAndDelete(userId)
 
@@ -308,6 +321,71 @@ const AccountController = {
 			return res
 				.status(500)
 				.json({success: false, message: 'Internal server error!'})
+		}
+	},
+
+	// XÓA BẠN
+	deleteFriend: async (req, res) => {
+		const friendId = req.params.id // Lấy friendId từ URL
+		const userId = req.userId // ID người dùng từ token đã xác thực
+
+		// Kiểm tra nếu friendId không hợp lệ
+		if (!mongoose.Types.ObjectId.isValid(friendId)) {
+			return res
+				.status(400)
+				.json({success: false, message: 'Invalid friend ID!'})
+		}
+
+		try {
+			// Tìm người dùng và bạn bè của họ
+			const user = await Account.findById(userId)
+			const friend = await Account.findById(friendId)
+
+
+
+			if (!user || !friend)
+				return res
+					.status(404)
+					.json({success: false, message: 'User or friend not found'})
+
+			// Kiểm tra xem friendId có trong danh sách bạn bè của user hay không
+			if (!user.friends.includes(friendId)) {
+				return res
+					.status(400)
+					.json({
+						success: false,
+						message: 'Friend not found in your friend list',
+					})
+			}
+
+			// Kiểm tra xem userId có trong danh sách bạn bè của friend hay không
+			if (!friend.friends.includes(userId)) {
+				return res
+					.status(400)
+					.json({
+						success: false,
+						message: "You are not in your friend's list",
+					})
+			}
+
+			// Xóa bạn trong danh sách bạn bè của cả user và friend
+			user.friends.pull(friendId)
+			friend.friends.pull(userId)
+
+			// Lưu lại thay đổi
+			await user.save()
+			await friend.save()
+
+			return res.json({
+				success: true,
+				message: 'Friend deleted successfully',
+				user,
+				friend,
+			})
+		} catch (error) {
+			return res
+				.status(500)
+				.json({success: false, message: 'Server error'})
 		}
 	},
 }

@@ -30,25 +30,24 @@ const verifyAdmin = (req, res, next) => {
 }
 
 const authMiddleware = async (req, res, next) => {
-	const token = req.header('Authorization')
+	// Lấy token từ header
+	const authHeader = req.header('Authorization')
+	const token = authHeader && authHeader.split(' ')[1]
 
+	// Nếu không có token
 	if (!token) {
-		return res.status(403).json({message: 'Access denied'})
+		return res
+			.status(401)
+			.json({message: 'Access Denied. No Token Provided.'})
 	}
 
 	try {
 		const decoded = jwt.verify(token, process.env.JWT_SECRET)
-		req.userId = decoded.userId // Lưu userId vào req để sử dụng trong các route
-		const user = await Account.findById(req.userId)
-
-		if (!user) {
-			return res.status(404).json({message: 'User not found'})
-		}
-		next() // Tiến hành xử lý tiếp theo trong route controller
-	} catch (error) {
-		return res.status(401).json({message: 'Invalid or expired token'})
+		req.user = decoded // Gắn user vào req
+		next()
+	} catch (err) {
+		return res.status(403).json({message: 'Invalid token'})
 	}
 }
-
 
 module.exports = {verifyToken, verifyAdmin, authMiddleware}

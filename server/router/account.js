@@ -24,5 +24,7 @@ router.put('/user/update', verifyToken, AccountController.updateUser)
 router.get('/friends', verifyToken, AccountController.getFriends);
 //XÓA TÀI KHOẢN USER
 router.delete('/user/:id', verifyToken, verifyAdmin, AccountController.deleteUser)
+//XÓA BẠN
+router.delete('/delete-friend/:id', verifyToken, AccountController.deleteFriend)
 
 module.exports = router
