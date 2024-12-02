@@ -13,6 +13,6 @@ router.delete('/:commentId', authMiddleware, CommentController.deleteComment)
 //XEM DANH SÁCH BÌNH LUẬN CỦA BÀI VIẾT
 router.get('/:postId', CommentController.getCommentsByPost)
 //XEM CHI TIẾT BÌNH LUẬN CỦA BÀI VIẾT
-router.get('/:commentId', authMiddleware, CommentController.getCommentDetail)
+router.get('/:commentId', CommentController.getCommentDetail)
 
 module.exports = router
