@@ -149,7 +149,7 @@ const PostController = {
 	commentOnPost: async (req, res) => {
 		const {content} = req.body // lấy nội dung bình luận
 		const postId = req.params.id // id bài viết
-		const userId = req.userId // id người dùng
+		const userId = req.user.userId // id người dùng
 
 		try {
 			const post = await Post.findById(postId)
@@ -172,9 +172,10 @@ const PostController = {
 			return res.status(201).json({
 				success: true,
 				message: 'Comment added successfully',
-				comment: newComment,
+				comment: newComment.populate(),
 			})
 		} catch (error) {
+
 			return res
 				.status(500)
 				.json({success: false, message: 'Server error: '})
